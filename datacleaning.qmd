@@ -1,0 +1,73 @@
+---
+title: "data cleaning"
+format: html
+editor: visual
+---
+
+```{r}
+library(tidyverse)
+```
+
+Clean Brady Estes Data
+
+```{r}
+estes_mus_clean <- estes_mus |>
+  select("gameid", "inning", "outs", "balls", "strikes", "paofinning", "pitchofpa",
+         "batterside","taggedpitchtype", "pitchcall", "relspeed", "spinrate", "extension",
+         "relheight", "relside", "vertrelangle", "horzrelangle", "inducedvertbreak",
+         "horzbreak", "platelocheight", "platelocside", "vertapprangle", "horzapprangle",
+         "exitspeed", "taggedhittype") |>
+  filter(batterside != "Undefined")
+```
+
+```{r}
+estes_tm_clean <- estes_tm |>
+  select("gameid", "inning", "outs", "balls", "strikes", "paofinning", "pitchofpa",
+         "batterside","taggedpitchtype", "pitchcall", "relspeed", "spinrate", "extension",
+         "relheight", "relside", "vertrelangle", "horzrelangle", "inducedvertbreak",
+         "horzbreak", "platelocheight", "platelocside", "vertapprangle", "horzapprangle",
+         "exitspeed", "taggedhittype") |>
+  filter(batterside != "Undefined")
+```
+
+```{r}
+estes_clean <- bind_rows(estes_mus_clean, estes_tm_clean) |>
+  distinct() |>
+  select(-"gameid")
+```
+
+```{r}
+write_csv(estes_clean, "estes_clean.csv")
+```
+
+Clean Sean McGrath Data
+
+```{r}
+mcgrath_mus_clean <- mcgrath_mus |>
+  select("gameid", "inning", "outs", "balls", "strikes", "paofinning", "pitchofpa",
+         "batterside","taggedpitchtype", "pitchcall", "relspeed", "spinrate", "extension",
+         "relheight", "relside", "vertrelangle", "horzrelangle", "inducedvertbreak",
+         "horzbreak", "platelocheight", "platelocside", "vertapprangle", "horzapprangle",
+         "exitspeed", "taggedhittype") |>
+  filter(batterside != "Undefined")
+```
+
+```{r}
+mcgrath_tm_clean <- mcgrath_tm |>
+  select("gameid", "inning", "outs", "balls", "strikes", "paofinning", "pitchofpa",
+         "batterside","taggedpitchtype", "pitchcall", "relspeed", "spinrate", "extension",
+         "relheight", "relside", "vertrelangle", "horzrelangle", "inducedvertbreak",
+         "horzbreak", "platelocheight", "platelocside", "vertapprangle", "horzapprangle",
+         "exitspeed", "taggedhittype") |>
+  filter(batterside != "Undefined")
+```
+
+```{r}
+mcgrath_clean <- bind_rows(mcgrath_mus_clean, mcgrath_tm_clean) |>
+  distinct() |>
+  select(-"gameid")
+```
+
+```{r}
+write_csv(mcgrath_clean, "mcgrath_clean.csv")
+```
