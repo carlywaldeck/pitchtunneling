@@ -6,4 +6,4 @@ editor: visual
 
 ## We should put our ideas here
 
-blabaha
+hi cole
