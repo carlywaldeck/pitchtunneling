@@ -1,0 +1,332 @@
+---
+title: "Exploratory Analysis"
+format: html
+editor: visual
+---
+
+## Quarto
+
+Quarto enables you to weave together content and executable code into a finished document. To learn more about Quarto see <https://quarto.org>.
+
+## Running Code
+
+When you click the **Render** button a document will be generated that includes both content and the output of embedded code. You can embed code like this:
+
+```{r}
+# Loading in the data and creating various dataframes for analysis
+all_estes <- read.csv()
+righty_estes <- filter(BatterSide == "Right")
+rGood_estes <- filter(BatterSide == "Right") %>%
+                filter(PitchCall == "StrikeSwinging" | 
+                      PitchCall == "InPlay" & ExitSpeed < 75)
+lefty_estes <- filter(BatterSide == "Left")
+lGood_estes <- filter(BatterSide == "Left") %>%
+                filter(PitchCall == "StrikeSwinging" | 
+                      PitchCall == "InPlay" & ExitSpeed < 75)
+                
+```
+```{r}
+# Pitch Usage Plot
+
+# Create PitchUsage Variable Here
+ggplot(data = righty_estes, 
+       mapping = aes(x = TaggedPitchType, 
+                     y = PitchUsage))
+      geom_boxplot(fill = "#31a354")
+```
+
+
+```{r}
+# Insert Code to make strike zone here
+```
+
+```{r}
+# Create a heat map for overall pitch usage then create heat map for whiffs
+```
+
+
+```{r}
+# Being able to find a pitch before AND a pitch after a Good Pitch
+```
+
+
+
+```{r}
+# movement_profile_only.R
+
+library(dplyr)
+library(ggplot2)
+library(ggforce)
+library(rlang)
+
+# ----------------------------
+# Column map using your names
+# ----------------------------
+column_map <- list(
+  pitcher_name = "Pitcher",
+  pitcher_id = "PitcherId",
+  pitcher_hand = "PitcherThrows",
+  batter_side = "BatterSide",
+  pitch_type = "TaggedPitchType",
+  velocity = "RelSpeed",
+  spin_rate = "SpinRate",
+  ivb = "InducedVertBreak",
+  hb = "HorzBreak",
+  extension = "Extension",
+  release_height = "RelHeight",
+  release_side = "RelSide",
+  plate_x = "PlateLocSide",
+  plate_z = "PlateLocHeight",
+  zone_speed = "ZoneSpeed",
+  vert_appr_angle = "VertApprAngle",
+  horz_appr_angle = "HorzApprAngle",
+  event = "PlayResult",
+  pitch_call = "PitchCall",
+  strikes = "Strikes",
+  balls = "Balls",
+  inning = "Inning",
+  outs_before = "Outs",
+  outs_on_play = "OutsOnPlay",
+  runs_scored = "RunsScored",
+  game_date = "Date",
+  batter = "Batter",
+  pa_id = "PAofInning",
+  pitch_number = "PitchNo",
+  exit_velocity = "ExitSpeed"
+)
+
+# -----------------------------------------
+# Optional pitch type map
+# Edit this to match your preferred labels
+# -----------------------------------------
+pitch_type_map <- c(
+  "FourSeamFastBall" = "4-Seam",
+  "Fastball" = "4-Seam",
+  "Four-Seam" = "4-Seam",
+  "Sinker" = "Sinker",
+  "TwoSeamFastBall" = "Sinker",
+  "Cutter" = "Cutter",
+  "Slider" = "Slider",
+  "Sweeper" = "Sweeper",
+  "Curveball" = "Curveball",
+  "ChangeUp" = "Changeup",
+  "Splitter" = "Splitter"
+)
+
+# -----------------------------------------
+# Pitch colors
+# Edit as desired
+# -----------------------------------------
+pitch_colors <- c(
+  "4-Seam" = "#1f66dc",
+  "Sinker" = "#39d5e6",
+  "Cutter" = "#39c27f",
+  "Slider" = "#5a2fd6",
+  "Sweeper" = "#ef40b4",
+  "Curveball" = "#ff4b2b",
+  "Changeup" = "#f2a93b",
+  "Splitter" = "#8b5a2b"
+)
+
+standardize_columns <- function(df, column_map) {
+  rename_pairs <- list()
+
+  for (std_name in names(column_map)) {
+    raw_name <- column_map[[std_name]]
+    if (raw_name %in% names(df)) {
+      rename_pairs[[std_name]] <- rlang::sym(raw_name)
+    }
+  }
+
+  if (length(rename_pairs) == 0) {
+    return(df)
+  }
+
+  dplyr::rename(df, !!!rename_pairs)
+}
+
+standardize_pitch_types <- function(df, pitch_type_map = NULL) {
+  if (!"pitch_type" %in% names(df)) {
+    return(df)
+  }
+
+  df <- df %>%
+    mutate(pitch_type = as.character(pitch_type))
+
+  if (is.null(pitch_type_map) || length(pitch_type_map) == 0) {
+    return(df)
+  }
+
+  df %>%
+    mutate(pitch_type = dplyr::recode(pitch_type, !!!pitch_type_map))
+}
+
+make_movement_profile <- function(data,
+                                  pitcher,
+                                  report_date = NULL,
+                                  min_usage = 0.01,
+                                  point_size = 5,
+                                  output_file = NULL,
+                                  width = 8,
+                                  height = 8,
+                                  dpi = 320) {
+  df <- data %>%
+    standardize_columns(column_map) %>%
+    standardize_pitch_types(pitch_type_map)
+
+  required_cols <- c("pitcher_name", "pitch_type", "hb", "ivb")
+  missing_cols <- setdiff(required_cols, names(df))
+  if (length(missing_cols) > 0) {
+    stop(
+      paste("Missing required columns:", paste(missing_cols, collapse = ", ")),
+      call. = FALSE
+    )
+  }
+
+  if (!is.null(report_date) && "game_date" %in% names(df)) {
+    df <- df %>%
+      mutate(game_date = as.Date(game_date)) %>%
+      filter(game_date == as.Date(report_date))
+  }
+
+  df <- df %>%
+    filter(
+      pitcher_name == pitcher,
+      !is.na(pitch_type),
+      !is.na(hb),
+      !is.na(ivb)
+    )
+
+  if (nrow(df) == 0) {
+    stop("No movement data found for that pitcher/date combination.", call. = FALSE)
+  }
+
+  total_pitches <- nrow(df)
+
+  df <- df %>%
+    group_by(pitch_type) %>%
+    mutate(pct = n() / total_pitches) %>%
+    ungroup() %>%
+    filter(pct >= min_usage)
+
+  p <- ggplot(df, aes(x = hb, y = ivb)) +
+    ggforce::geom_circle(
+      aes(x0 = 0, y0 = 0, r = 25),
+      inherit.aes = FALSE,
+      linewidth = 0.25,
+      color = "black",
+      fill = NA,
+      linetype = "dashed",
+      alpha = 0.5
+    ) +
+    ggforce::geom_circle(
+      aes(x0 = 0, y0 = 0, r = 20),
+      inherit.aes = FALSE,
+      linewidth = 0.25,
+      color = "black",
+      fill = NA
+    ) +
+    ggforce::geom_circle(
+      aes(x0 = 0, y0 = 0, r = 15),
+      inherit.aes = FALSE,
+      linewidth = 0.25,
+      color = "black",
+      fill = NA,
+      linetype = "dashed",
+      alpha = 0.5
+    ) +
+    ggforce::geom_circle(
+      aes(x0 = 0, y0 = 0, r = 10),
+      inherit.aes = FALSE,
+      linewidth = 0.25,
+      color = "black",
+      fill = NA
+    ) +
+    ggforce::geom_circle(
+      aes(x0 = 0, y0 = 0, r = 5),
+      inherit.aes = FALSE,
+      linewidth = 0.25,
+      color = "black",
+      fill = NA,
+      linetype = "dashed",
+      alpha = 0.5
+    ) +
+    geom_segment(
+      aes(x = 0, y = -25, xend = 0, yend = 25),
+      inherit.aes = FALSE,
+      color = "black",
+      linetype = "dashed",
+      linewidth = 0.4
+    ) +
+    geom_segment(
+      aes(x = -25, y = 0, xend = 25, yend = 0),
+      inherit.aes = FALSE,
+      color = "black",
+      linetype = "dashed",
+      linewidth = 0.4
+    ) +
+    geom_point(
+      aes(fill = pitch_type),
+      alpha = 0.8,
+      shape = 21,
+      color = "black",
+      stroke = 0.5,
+      size = point_size
+    ) +
+    annotate("text", x = 20, y = 0, label = "20", vjust = -0.5, hjust = 1.2) +
+    annotate("text", x = 10, y = 0, label = "10", vjust = -0.5, hjust = 1.2) +
+    annotate("text", x = -20, y = 0, label = "20", vjust = -0.5, hjust = -0.2) +
+    annotate("text", x = -10, y = 0, label = "10", vjust = -0.5, hjust = -0.2) +
+    annotate("text", x = 0, y = 20, label = "20", hjust = -0.2, vjust = -0.5) +
+    annotate("text", x = 0, y = -20, label = "20", hjust = -0.2, vjust = -0.5) +
+    annotate("text", x = 0, y = 10, label = "10", hjust = -0.2, vjust = -0.5) +
+    annotate("text", x = 0, y = -10, label = "10", hjust = -0.2, vjust = -0.5) +
+    annotate("text", x = -18.5, y = 25, label = "\u2190 Towards 1B", color = "black", size = 5, hjust = 0.5) +
+    annotate("text", x = 18.5, y = 25, label = "Towards 3B \u2192", color = "black", size = 5, hjust = 0.5) +
+    scale_x_continuous(
+      name = "Horizontal Movement (in)",
+      limits = c(-25, 25),
+      breaks = seq(-20, 20, by = 10)
+    ) +
+    scale_y_continuous(
+      name = "Induced Vertical Movement (in)",
+      limits = c(-25, 25),
+      breaks = seq(-20, 20, by = 10)
+    ) +
+    scale_fill_manual(values = pitch_colors, guide = "none") +
+    coord_equal() +
+    theme_minimal() +
+    theme(
+      plot.title = element_blank(),
+      legend.position = "none",
+      panel.background = element_rect(fill = "#ffffff", color = NA),
+      plot.background = element_rect(fill = "#ffffff", color = NA),
+      panel.grid.minor = element_line(color = "grey85", linewidth = 0.3),
+      panel.grid.major = element_line(color = "grey80", linewidth = 0.4),
+      axis.text.x = element_text(size = 20),
+      axis.text.y = element_text(size = 20),
+      axis.title.x = element_text(size = 20),
+      axis.title.y = element_text(size = 20)
+    )
+
+  if (!is.null(output_file)) {
+    ggsave(output_file, p, width = width, height = height, dpi = dpi, bg = "white")
+  }
+
+  p
+}
+
+# ----------------------------
+# Example usage
+# ----------------------------
+game_data <- read.csv("CalPoly_UCSB_4-2-26.csv")
+p <- make_movement_profile(
+data = game_data,
+pitcher = "Naess, Griffin",
+report_date = NULL,
+   output_file = "naess_movement_profile.png"
+)
+#
+print(p)
+```
+
