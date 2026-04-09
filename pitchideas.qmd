@@ -1,0 +1,9 @@
+---
+title: "project ideas"
+format: html
+editor: visual
+---
+
+## We should put our ideas here
+
+blabaha
