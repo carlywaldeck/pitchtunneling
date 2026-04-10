@@ -84,15 +84,18 @@ plot.subtitle = element_text(hjust = 0.5)
 
 ```{r}
 # Create a heat map for overall pitch usage then create heat map for whiffs
-locationChart <- function(df) {
+library(readr)
+library(dplyr)
+library(ggplot2)
+locationChart <- function(df, plot_title = "Pitch Location Heatmap") {
   colors <- c(
-    "Fastball" = "dodgerblue3",
-    "FourSeamFastBall" = "red",
+    "Fastball" = "dodgerblue",
+   "FourSeamFastBall" = "dodgerblue",
     "Cutter" = "darkorange3",
-    "Curveball" = "darkred",
-    "Sinker" = "goldenrod3",
-    "Slider" = "darkolivegreen3",
-    "ChangeUp" = "darkorchid3",
+    "Curveball" = "darkgreen",
+    "Sinker" = "dodgerblue",
+    "Slider" = "orange",
+    "ChangeUp" = "red",
     "Splitter" = "darkorchid3",
     "Sweeper" = "skyblue"
   )
@@ -117,7 +120,7 @@ locationChart <- function(df) {
     ylim(0, 5) +
     scale_color_manual(values = colors) +
     labs(
-      title = "Location Map",
+      title = plot_title,
       subtitle = "Pitcher's Perspective",
       x = "Horizontal Location (ft)",
       y = "Vertical Location (ft)",
@@ -132,12 +135,67 @@ locationChart <- function(df) {
 }
 game_data <- read_csv("estes_clean.csv")
 
-locationChart(game_data)
+locationChart(game_data, "All Pitches")
 
-locationChart(lGood_estes)
-locationChart(rGood_estes)
+locationChart(lGood_estes, "Lefty Whiffs")
+locationChart(rGood_estes, "Righty Whiffs")
+locationChart(righty_estes, "All Righty")
+locationChart(lefty_estes, "All Lefty")
 ```
 
+
+```{r}
+locationHeatmap <- function(df, plot_title = "Pitch Location Heatmap") {
+
+  ggplot(df, aes(x = platelocside, y = platelocheight)) +
+    stat_density_2d(aes(fill = after_stat(density)), 
+                    geom = "raster", contour = FALSE) +
+    
+    annotate(
+      "rect",
+      xmin = -0.85, xmax = 0.85,
+      ymin = 1.6, ymax = 3.5,
+      color = "black", fill = NA, linewidth = 1
+    ) +
+    
+    geom_segment(
+      data = home_plate_segments,
+      aes(x = x, y = y, xend = xend, yend = yend),
+      inherit.aes = FALSE,
+      linewidth = 0.7,
+      color = "black"
+    ) +
+    
+    coord_fixed() +
+    xlim(-2, 2) +
+    ylim(0, 5) +
+    
+    scale_fill_gradient(low = "white", high = "red") +
+    
+    labs(
+      title = plot_title,   # 👈 use variable here
+      subtitle = "Pitcher's Perspective",
+      x = "Horizontal Location (ft)",
+      y = "Vertical Location (ft)",
+      fill = "Density"
+    ) +
+    
+    theme_minimal() +
+    theme(
+      panel.grid.minor = element_blank(),
+      plot.title = element_text(hjust = 0.5, face = "bold", size = 16),
+      plot.subtitle = element_text(hjust = 0.5)
+    )
+}
+
+game_data <- read_csv("estes_clean.csv")
+
+locationHeatmap(game_data, "All Pitches")
+locationHeatmap(lefty_estes, "Righty Only")
+locationHeatmap(righty_estes, "Lefty Only")
+locationHeatmap(lGood_estes, "Lefty Whiffs")
+locationHeatmap(rGood_estes, "Righty Whiffs")
+```
 
 
 
