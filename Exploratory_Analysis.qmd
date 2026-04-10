@@ -14,15 +14,15 @@ When you click the **Render** button a document will be generated that includes 
 
 ```{r}
 # Loading in the data and creating various dataframes for analysis
-all_estes <- read.csv()
-righty_estes <- filter(BatterSide == "Right")
-rGood_estes <- filter(BatterSide == "Right") %>%
-                filter(PitchCall == "StrikeSwinging" | 
-                      PitchCall == "InPlay" & ExitSpeed < 75)
-lefty_estes <- filter(BatterSide == "Left")
-lGood_estes <- filter(BatterSide == "Left") %>%
-                filter(PitchCall == "StrikeSwinging" | 
-                      PitchCall == "InPlay" & ExitSpeed < 75)
+library(readr)
+library(dplyr)
+all_estes <- read_csv("estes_clean.csv")
+righty_estes <- filter(all_estes, batterside == "Right")
+ rGood_estes <- filter(righty_estes, pitchcall == "StrikeSwinging" | 
+                        pitchcall == "InPlay" & exitspeed < 75)
+lefty_estes <- filter(all_estes, batterside == "Left")
+lGood_estes <- filter(lefty_estes, pitchcall == "StrikeSwinging" | 
+                      pitchcall == "InPlay" & exitspeed < 75)
                 
 ```
 ```{r}
